@@ -1,5 +1,5 @@
 # requirements.txt
 snowflake-connector-python == 3.0.3
 matplotlib == 3.7.1
-charset-normalizer<3,>=2
-urllib3<1.27,>=1.21.1
+charset-normalizer<3,==2
+urllib3<1.27,==1.21.1
