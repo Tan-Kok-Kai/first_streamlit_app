@@ -1,3 +1,4 @@
 # requirements.txt
 matplotlib
 snowflake-connector-python
+snowflake.snowpark
