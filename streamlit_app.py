@@ -1,4 +1,7 @@
-%pip install -r requirements.txt
+import subprocess
+
+# Install packages from requirements.txt
+subprocess.run(["pip", "install", "-r", "requirements.txt"])
 # Import neccessary packages
 import streamlit as st
 import pandas as pd
