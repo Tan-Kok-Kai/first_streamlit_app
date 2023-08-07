@@ -1,5 +1,5 @@
 # requirements.txt
-matplotlib
+matplotlib==3.7.1
 snowflake-connector-python
 pickle
 bz2
