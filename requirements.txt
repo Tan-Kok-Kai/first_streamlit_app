@@ -1,3 +1,5 @@
 # requirements.txt
 matplotlib
 snowflake-connector-python
+pickle
+bz2
