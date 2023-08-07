@@ -1,4 +1,4 @@
-%pip install matplotlib
+%pip install -r requirements.txt
 # Import neccessary packages
 import streamlit as st
 import pandas as pd
