@@ -53,7 +53,7 @@ with tab1:
     
     ## Define function to load the customer's cluster results
     def SW_load_cust_cluster():
-        data_cust_cluster = pd.read_csv("./SW_cluster_results.csv") 
+        data_cust_cluster = pd.read_csv("SW_cluster_results.csv") 
         data_cust_cluster = pd.DataFrame(data_cust_cluster)
         return data_cust_cluster
     
