@@ -53,213 +53,224 @@ with tab4:
     a=4
     
 with tab5:
-    menu_dfs = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_pos.menu")
-    truck_df = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_pos.truck")
-    history_df = session.table("FROSTBYTE_POWERBI.ANALYTICS.INVENTORY_MANAGEMENT")
-    history_df = history_df.filter(F.col('ORDER_YEAR') == 2022)
-    history_df = history_df.filter(F.col('ORDER_MONTH') >= 10)
-    truck_df = truck_df.with_column('LAST_DATE', F.iff(F.col("TRUCK_ID") == F.col('TRUCK_ID'), "2022-10-18", '0'))
-    truck_df = truck_df.withColumn("DAYS_OPENED", F.datediff("day", F.col("TRUCK_OPENING_DATE"), F.col('LAST_DATE')))
-    menu_df = menu_dfs.to_pandas()
-    truck_df = truck_df.to_pandas()
-    #im = pickle.load(open('inventory_model.sav', 'rb'))
-    with bz2.BZ2File('rf.pkl', 'rb') as compressed_file:
-        im = pickle.load(compressed_file)
-    st.title('Demand Forecasting')
-    st.caption('This demand forecasting is mainly for truck owners to have an idea on their sales and demand of menu within the next 30 days. \
-            It aims to target the high level goal of 25% YoY sales growth over 5 years.\
-               Gaining insights into future demand allow truck owners to optimize their menu by focusing on food high in demand\
-               , which will attract more customers, increase in profit and ultimately increase in sales!')
-    st.subheader('Truck')
-    truck_df = truck_df.sort_values(by='TRUCK_ID').set_index('TRUCK_ID')
+    st.title('Predicting Customer Churn :worried:')
+    # introduction of web tab
+    st.write("In this web tab, Tasty Bytes management will have the ability to obtain details about churn customers across various customer segments. They can **leverage the insights and advice provided to take proactive measures** aimed at retaining these customers in order for Tasty Bytes to **reach their goal** of increasing Net Promoter Score (NPS) from 3 to 40 by year end 2023. By **effectively addressing churn**, this will ensure that customers are engaged and shows strong loyalty and satisfaction towards Tasty Bytes, signifying that the NPS score is **poised to increase**.")
+    st.write("Additionally, the management will also be able to **experiment** with customer's details to **predict** whether they will be likely to churn or not.")
+    st.write("Customers are likely to churn when their predicted days to next purchase is **more than 14 days**.")
+    st.header('Details of Churn Customers :face_with_monocle:')
 
-    # Let's put a pick list here so they can pick the fruit they want to include 
-    #st.caption("As a food truck owner, you should know your truck ID. Pick your Truck ID below which ranges from 1 to 450")
-    trucks_selected = st.selectbox("As a food truck owner, you should know your truck ID. Pick your Truck ID below which ranges from 1 to 450", list(truck_df.index))
-    trucks_to_show = truck_df.loc[[trucks_selected]]
-    history_df = history_df.filter(F.col('TRUCK_ID') == trucks_selected)
-    history_df = history_df.to_pandas()
-    #st.dataframe(history_df)
-    # Display the table on the page.
-    #st.dataframe(trucks_to_show)
-    trucks_to_show.reset_index(inplace=True)
-    merge = pd.merge(menu_df, trucks_to_show, on=['MENU_TYPE_ID'],how='outer', indicator=True)
-    final_scaled = merge[merge['_merge'] == 'both'].drop('_merge', axis = 1)
-    st.subheader('Menu')
-    menu_df = final_scaled.set_index('MENU_ITEM_NAME')
-    #st.caption("Select the menu that you would like to predict. By default, the selection will include your \
-     #          highest food in demand for the past month!")
-    # Let's put a pick list here so they can pick the fruit they want to include 
-    topfood = history_df.groupby('MENU_ITEM_ID')['DEMAND'].max().idxmax()
-    #st.text(topfood)
-    topmenu = final_scaled[final_scaled['MENU_ITEM_ID'] == topfood]
-    #st.dataframe(topmenu)
-    menu_selected = st.multiselect("Select the menu that you would like to predict. By default, the selection will include your \
-               highest food in demand for the past month!", list(menu_df.index), topmenu['MENU_ITEM_NAME'])
-    menu_to_show = menu_df.loc[menu_selected]
-    #st.dataframe(menu_to_show)
-    st.subheader('Prediction')
-    final = menu_to_show[['MENU_ITEM_ID', 'TRUCK_ID', 'SALE_PRICE_USD', 'EV_FLAG', 'MENU_TYPE_ID',
-                          'ITEM_SUBCATEGORY', 'COST_OF_GOODS_USD', 'ITEM_CATEGORY', 'DAYS_OPENED']]
-    unique_menuid = list(final['MENU_ITEM_ID'].unique())
-    #st.text(unique_menuid)
-    history_df = history_df[history_df['MENU_ITEM_ID'].isin(unique_menuid)]
-    #st.dataframe(history_df)
-    final['TEMPERATURE_OPTION'] = np.where(final['ITEM_SUBCATEGORY'] == 'Cold Option', 0, np.where(final['ITEM_SUBCATEGORY'] 
-                                                                                                  == 'Warm Option', 1, 2))
-    final['ITEM_CATEGORY_Main'] = np.where(final['ITEM_CATEGORY'] == 'Main', 1, 0)
-    final['ITEM_CATEGORY_Beverage'] = np.where(final['ITEM_CATEGORY'] == 'Beverage', 1, 0)
-    final['ITEM_CATEGORY_Dessert'] = np.where(final['ITEM_CATEGORY'] == 'Dessert', 1, 0)
-    final['ITEM_CATEGORY_Snack'] = np.where(final['ITEM_CATEGORY'] == 'Snack', 1, 0)
-    #st.subheader('Day Slider')
-    #st.caption('Use the slider to predict for the next 1 to 30 days')
-    numdays = st.slider('Use the slider to predict for the next 1 to 30 days', 1, 30)
-    tdays = numdays
-    #st.write(numdays)
-    # '2022-11-01'
-    final = pd.concat([final]*numdays, ignore_index=True)
-    #st.dataframe(final)
-    #st.write(menu_to_show)
-    index = 0
-    final['ORDER_YEAR'] = 2023
-    final['ORDER_MONTH'] = 1
-    final['ORDER_DAY'] = 2
-    datetime_str = '2022-11-01'
-    datetime_object = datetime.strptime(datetime_str, '%Y-%m-%d')
-    past_demand = history_df['DEMAND'].sum() / 32 * numdays
-    history_df['SALES_GENERATED'] = history_df['DEMAND'] * history_df['UNIT_PRICE']
-    past_sales = history_df['SALES_GENERATED'].sum()/32*numdays
-    while numdays > 0:
-        preddate = datetime_object + timedelta(days=numdays)
-        for i in range(len(menu_to_show)):
-            final.loc[index, 'ORDER_YEAR'] = preddate.year
-            final.loc[index, 'ORDER_MONTH'] = preddate.month
-            final.loc[index, 'ORDER_DAY'] = preddate.day
-            index += 1
-        numdays -= 1
-    final['UNIT_PRICE'] = final['SALE_PRICE_USD']
-    final_df = final[['MENU_ITEM_ID', 'TRUCK_ID','ORDER_YEAR', 'ORDER_MONTH', 'ORDER_DAY','UNIT_PRICE', 'EV_FLAG', 'DAYS_OPENED',
-                      'MENU_TYPE_ID', 'TEMPERATURE_OPTION', 'COST_OF_GOODS_USD', 'ITEM_CATEGORY_Main', 'ITEM_CATEGORY_Beverage'
-                      ,'ITEM_CATEGORY_Dessert','ITEM_CATEGORY_Snack']]
-    #st.dataframe(final)
-    #st.dataframe(final_df)
-    if st.button("Predict demand"):
-        taba,  tabd, tabb, tabc = st.tabs(["Predicted demand per food", "Actionable Insights","Past vs Future (Demand)", "Past vs Future (Sales)"])
-        pred = im.predict(final_df)
-        #st.text(pred)
-        predlist = []
-        counter = -1
-        index = 0
-        count = 0
-        for i in range(len(menu_to_show)):
-            counter += 1
-            index = counter
-            while index < len(pred):
-                count += pred[index] 
-                index += len(menu_to_show)
-            predlist.append(count)
-            count = 0
-        #st.text(predlist)
-        menu = menu_to_show.reset_index()
-        str1 = ''
-        present_sales = 0
-        with taba:
-            for i in range(len(menu)):
-                str1 = menu['MENU_ITEM_NAME'][i]
-                st.subheader(str1)
-                st.text('The predicted demand for ' + str1 + ' is ' + str(int(predlist[i])))
-                st.text("The sales generated by " + str1 + " will be ${:.2f}".format(predlist[i] * menu['SALE_PRICE_USD'][i]))
-                present_sales += predlist[i] * menu['SALE_PRICE_USD'][i]
-                #st.text("The average sales generated in this duration is $4000, increase in 200%")
-                #st.text("The profit generated will be ...")
-            #st.text(past_demand)
-            #st.text(past_sales)
-            # Sample data (replace with your actual data)
-            past = {'Demand': past_demand}
-            future = {'Demand': sum(predlist)}
-        with tabd:
-            recipe_df = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_supply_chain.recipe").to_pandas()
-            item_df = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_supply_chain.item").to_pandas()
-            i_df = pd.DataFrame(columns=["MENU_ITEM_ID", "MENU_ITEM_NAME", "DEMAND"])
-            for i in range(len(menu)):
-                i_df = i_df.append({"MENU_ITEM_ID": menu['MENU_ITEM_ID'][i],"MENU_ITEM_NAME": menu['MENU_ITEM_NAME'][i] ,"DEMAND": predlist[i]}, ignore_index = True)
-            #st.dataframe(i_df)
-            merged = pd.merge(recipe_df, i_df,on = 'MENU_ITEM_ID',how='outer', indicator=True)
-            i_df = merged[merged['_merge'] == 'both'].drop('_merge', axis = 1)
-            #st.dataframe(i_df)
-            merged2 = pd.merge(i_df, item_df, on = 'ITEM_ID', how = 'outer', indicator = True)
-            i_df = merged2[merged2['_merge'] == 'both'].drop('_merge', axis = 1)
-            i_df['DEMAND_ITEM'] = i_df['UNIT_QUANTITY'] * i_df['DEMAND']
-            i_group = i_df.groupby('ITEM_ID')['DEMAND_ITEM'].sum().reset_index()
-            #st.dataframe(i_group)
-            #st.dataframe(i_df)
-            for i in range(len(i_group)):
-                for x in range(len(i_df)):
-                    if i_group['ITEM_ID'][i] == i_df['ITEM_ID'][x]:
-                        st.subheader(i_df['NAME'][x])
-                        st.text('Number of item required: {0:.2f}'.format(i_group['DEMAND_ITEM'][i]))
-                        st.text('In units: {0}'.format(i_df['UNIT'][x]))
-                        st.text('Cost: ${0:.2f}'.format(i_df["UNIT_PRICE"][i] * i_group['DEMAND_ITEM'][i]))
-                        break
-                    
-            #for i in range(len(menu)):
-            #    st.subheader(menu['MENU_ITEM_NAME'][i])
-            #    for x in range(len(i_df)):
-            #        if i_df['MENU_ITEM_ID'][x] == menu['MENU_ITEM_ID'][i]:
-            #            st.text("{0:.2f}: {1}".format(i_df['NAME'][x], i_df['DEMAND_ITEM'][x]))
+    # loading of dataset 
+    def load_next_purchase_cust_seg():
+        data = pd.read_csv("NextPurchaseCustSeg2.csv")
+        return data
+    
+    # filter csv based on customer segment chosen 
+    def filter_cust_seg(data):
+        filtered_cust_seg = next_purchase_cust_seg[next_purchase_cust_seg['CLUSTER']==data]
+        return filtered_cust_seg
+    
+    # filter csv based on whether customer likely to churn or not
+    def filter_cust_churn(data):
+        filtered_cust_churn = filtered_cust_seg[filtered_cust_seg["CHURN_STATUS"] == data]
+        return filtered_cust_churn
+    
+    # convert dataframe to csv 
+    def convert_df(df):
+       return df.to_csv(index=False).encode('utf-8')
 
-        with tabb:
-            # Streamlit app
-            #st.title('Past and Future Comparison')
-            #st.caption('Past data is calculated by taking the past 1 month of historical data and \
-            #        averaging to the number of days stated by the slider. Future data is calculated by the sum of predicted values.')
-            # Plotting the bar chart
-            fig, ax = plt.subplots()
-            products = list(past.keys())
-            past_values = list(past.values())
-            future_values = list(future.values())
-            bar_width = 0.35
-            indices = np.arange(len(products))
-            p1 = ax.bar(indices, past_values, bar_width, label='Past')
-            p2 = ax.bar(indices + bar_width, future_values, bar_width, label='Future')
+    next_purchase_cust_seg = load_next_purchase_cust_seg()
+    next_purchase_cust_seg.rename(columns={'CHURN': 'CHURN_STATUS'}, inplace=True)
 
-            ax.set_xlabel('Products')
-            ax.set_ylabel('Demand')
-            ax.set_title('Past vs Future (Demand)')
-            ax.set_xticks(indices + bar_width / 2)
-            ax.set_xticklabels(products)
-            ax.legend()
+    cust_seg_label_mapping = {0: 'Middle Value', 1: 'Low Value', 2:'High Value'}
+    next_purchase_cust_seg['CLUSTER'] = next_purchase_cust_seg['CLUSTER'].map(cust_seg_label_mapping)
+    # select customer segment
+    cust_seg = st.selectbox(
+    'Select the information of the customer segment that you would like to view',
+    options = ['Low Value (Customers who buy less frequently and generate lower sales)', 
+                             'Middle Value (Customers who make average purchases)', 
+                             'High Value (Customers who make frequent purchases and generate higher sales)'])
+    
+    # show percentage of churn and not churn of customer segment chosen using bar charts
+    cust_seg_option = cust_seg.split('(')[0].strip()
+    filtered_cust_seg = filter_cust_seg(cust_seg_option)
+    churn_label_mapping = {0: 'Not Churn', 1: 'Churn'}
+    filtered_cust_seg['CHURN_STATUS'] = filtered_cust_seg['CHURN_STATUS'].map(churn_label_mapping)
+    cust_churn_bar = filtered_cust_seg['CHURN_STATUS'].value_counts()
+    st.bar_chart(data = cust_churn_bar)
 
-            # Display the bar chart in Streamlit
-            st.pyplot(fig)
-            st.text("It is predicted to have {0:.2f}% demand increase in the next {1} days".format(
-                (sum(predlist) - past_demand) / past_demand * 100, tdays))
-        with tabc:
-            # Sample data (replace with your actual data)
-            past = {'Sales Generated': past_sales}
-            future = {'Sales Generated': present_sales}
+    # show details of cust likely to churn 
+    st.write("Details of customers likely to churn")
+    churn_cust = filter_cust_churn("Churn")
+    not_churn_cust = filter_cust_churn("Not Churn")
+    customer_df = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_customer.customer_loyalty")
+    us_customer_df_sf = customer_df.filter(F.col("COUNTRY")=="United States")
+    us_customer_df = us_customer_df_sf.to_pandas()
+    us_customer_df = us_customer_df[us_customer_df['CUSTOMER_ID'].isin(churn_cust['CUSTOMER_ID'])]
+    us_customer_df = pd.merge(us_customer_df, churn_cust, on='CUSTOMER_ID', how='inner')
+    us_customer_df = us_customer_df.sort_values(by='PREDICTED')
+    us_customer_df = us_customer_df.reset_index(drop=True)
+    cust_to_show = us_customer_df[["FIRST_NAME", "LAST_NAME", "GENDER", "MARITAL_STATUS", "CHILDREN_COUNT", "BIRTHDAY_DATE", "E_MAIL", "PHONE_NUMBER", "TOTAL_SPENT", "TOTAL_ORDER", "YEARS_WITH_US", "PREDICTED"]]
+    cust_to_show.rename(columns={'PREDICTED': 'PREDICTED_DAYS_TO_NEXT_PURCHASE'}, inplace=True)
+    cust_to_show['YEARS_WITH_US'] = cust_to_show['YEARS_WITH_US'].round().astype(int)
+    cust_to_show['PREDICTED_DAYS_TO_NEXT_PURCHASE'] = cust_to_show['PREDICTED_DAYS_TO_NEXT_PURCHASE'].astype(int)
+    st.dataframe(cust_to_show)
 
-            # Streamlit app
-            #st.title('Past and Future Comparison')
+    # give insights about the churn customers
+    avg_churn_recency = str(math.floor(churn_cust['RECENCY_DAYS'].mean()))
+    avg_not_churn_recency = str(math.floor(not_churn_cust['RECENCY_DAYS'].mean())) 
+    min_predicted = str(cust_to_show['PREDICTED_DAYS_TO_NEXT_PURCHASE'].min())
+    max_predicted = str(cust_to_show['PREDICTED_DAYS_TO_NEXT_PURCHASE'].max())
+    avg_predicted = str(math.floor(cust_to_show['PREDICTED_DAYS_TO_NEXT_PURCHASE'].mean()))
+    st.subheader("Insights :mag_right:")
+    st.write("Out of all the " + str(cust_seg_option) + " customers, "+ str(len(cust_to_show)) + " of them are **likely to churn** as the average time since their last order is approximately **" + str(avg_churn_recency) + " days**, compared to unlikely to churn customers of " + str(avg_not_churn_recency) + " days.")
+    st.write("These customers have a predicted **"+ min_predicted + "-"+ max_predicted + " days** to next purchase range, with the average customers having a predicted " + avg_predicted + " days to next purchase.")
+    csv = convert_df(cust_to_show)
 
-            # Plotting the bar chart
-            fig, ax = plt.subplots()
-            products = list(past.keys())
-            past_values = list(past.values())
-            future_values = list(future.values())
-            bar_width = 0.35
-            indices = np.arange(len(products))
-            p1 = ax.bar(indices, past_values, bar_width, label='Past')
-            p2 = ax.bar(indices + bar_width, future_values, bar_width, label='Future')
+    # give advice on how to retain the churn customers
+    st.subheader("Advice to retain the churn customers :bulb:")
+    if cust_seg_option == "High Value":
+        st.write("Since these customers are of high value, it will be **crucial** to implement targeted retention strategies to address their potential churn as they **contribute to a significant portion of Tasty Bytes sales**.")
+        st.write("The reasons behind **why** these customers are showing signs of potential churn despite contributing so much to Tasty Bytes’ sales and making frequent orders should be **investigated**.")
+        st.write("To retain these customers, **exclusive menu items** can be offered to these customers to provide them with a **unique and premium experience**, creating a **sense of loyalty and making them less likely to switch to competitors**.")
+        st.write("Another suggestion is to focus on the high value customers that are more likely to purchase in the next **"+ min_predicted + "-" + avg_predicted + " days**, rather than customers predicted to purchase in eg. " + max_predicted + " days. This range is derived from taking the minimum and the average number of predicted days until next purchase of customers in this segment, pinpointing a timeframe that **strikes a balance between immediate action and a reasonable lead time for retention**. This can impact overall retention rates more **effectively** and **generate quicker positive results** compared to those with longer predicted purchase timelines.")  
+    elif cust_seg_option == "Middle Value":
+        st.write("Even though these customers are of middle value, they still play a significant role in the overall business. It is still **essential** to address their potential churn to maintain a **healthy customer base**.")
+        st.write("Feedback can be gathered from these customers through **surveys or feedback forms** to help **identify areas for improvement and tailor services to better meet their needs**. Responding to their concerns and suggestions can demonstrate that their **opinions are valued**, fostering a **positive customer experience**.")
+        st.write("To retain these customers, implementing **personalised special offers and discounts based on their preferences and order history** can be a strategic approach. This will encourage **repeat business** and foster a **sense of appreciation** amongst these customers.")
+        st.write("Another suggestion is to focus on the middle value customers that are more likely to purchase in the next **"+ min_predicted + "-" + avg_predicted + " days**, rather than customers predicted to purchase in eg. " + max_predicted + " days. This range is derived from taking the minimum and the average number of predicted days until next purchase of customers in this segment, pinpointing a timeframe that **strikes a balance between immediate action and a reasonable lead time for retention**. This can impact overall retention rates more **effectively** and **generate quicker positive results** compared to those with longer predicted purchase timelines.") 
+    else:
+        st.write("While low value customers may not contribute as much sales as high or middle value customers, it is still **important** to address their potential churn and **explore ways** to retain them as they still represent a portion of Tasty Bytes’ customer base.")
+        st.write("Analysing these customer’s order history and feedback through **surveys or feedback forms** can help to identify **customer’s preferences, buying behaviour and pain points** to be addressed to improve the overall customer experience.")
+        st.write("To retain these customers, **attractive discounts or promotions such as cost-effective deals** can be offered to **incentivize repeat purchases** and even an increase in order frequency. This may also potentially **convert some of them into higher value customers** in the long run, contributing positively to the overall business growth.")
+        st.write("Another suggestion is to focus on the low value customers that are more likely to purchase in the next **"+ min_predicted + "-" + avg_predicted + " days**, rather than customers predicted to purchase in eg. " + max_predicted + " days. This range is derived from taking the minimum and the average number of predicted days until next purchase of customers in this segment, pinpointing a timeframe that **strikes a balance between immediate action and a reasonable lead time for retention**. This can impact overall retention rates more **effectively** and **generate quicker positive results** compared to those with longer predicted purchase timelines.") 
+    st.write("With customer details, **targeted marketing strategies such as email marketing** can be implemented to deliver personalised messages, promotions and offers that resonate with each customer. This makes the emails become more **engaging and relevant**, fostering a sense of value and loyalty amongst customers.")
 
-            ax.set_xlabel('Products')
-            ax.set_ylabel('Sales Generated')
-            ax.set_title('Past vs. Future (Sales Generated)')
-            ax.set_xticks(indices + bar_width / 2)
-            ax.set_xticklabels(products)
-            ax.legend()
+    st.download_button(
+       "Press to Download Details of " + cust_seg_option + " Customers Likely to Churn",
+       csv,
+       "churn_cust_" + str(cust_seg_option) +".csv",
+       "text/csv",
+       key='download-csv')
 
-            # Display the bar chart in Streamlit
-            st.pyplot(fig)
-            st.text("It is predicted to have {0:.2f}% sales increase in the next {1} days".format(
-                (present_sales - past_sales) / past_sales * 100, tdays))
+
+
+    st.header('Predicting whether customers churn :face_with_one_eyebrow_raised:')
+
+    # loading model
+    with open('NextPurchase2.pkl', 'rb') as file:
+        npm = pickle.load(file)
+
+    # total spending input
+    avg_spending = math.floor(us_customer_df['TOTAL_SPENT'].mean()) 
+    spending_option = st.number_input("Input Total Spending of Customer", min_value=1, value = avg_spending)
+
+    st.write('You selected:', spending_option)
+
+    # years with us input
+    max_year = datetime.today().year - 2019
+    years_list = [str(year) for year in range(1, max_year + 1)]
+    years_with_us_option = st.selectbox(
+    'Select the Number of Years the Customer has been with Tasty Bytes',years_list)
+
+    st.write('You selected:', years_with_us_option)
+
+    # select no of orders
+    total_orders_option = st.number_input("Input Number of Orders", min_value=1)
+
+    st.write('You selected:', total_orders_option)
+
+    # input last purchase date
+    first_date = datetime(2019, 1, 1)
+    today_date = datetime(2022, 11, 1)
+    date = st.date_input("Enter the customer's last purchase date", first_date, first_date,today_date,today_date)
+
+    st.write('You selected:', date)
+
+    # predict churn button
+    if 'clicked' not in st.session_state:
+        st.session_state.clicked = False
+
+    def click_button():
+        st.session_state.clicked = True
+
+    st.button('Predict whether Customer is Likely to Churn', on_click=click_button)
+
+    # predict whether customer is likely to churn 
+    if st.session_state.clicked:
+        #calculate average of trans_datediff1
+        trans_datediff1 = next_purchase_cust_seg['TRANS_DATEDIFF1'].mean()
+
+        #calculate average of trans_datedif2
+        trans_datediff2 = next_purchase_cust_seg['TRANS_DATEDIFF2'].mean()
+
+        #calculate average of avg(days_between)
+        avg_days_between = next_purchase_cust_seg['AVG(DAYS_BETWEEN)'].mean()
+   
+        #calculate average of min(days_between)
+        min_days_between = next_purchase_cust_seg['MIN(DAYS_BETWEEN)'].mean()
+
+        #calculate average of max(days_between)
+        max_days_between= next_purchase_cust_seg['MAX(DAYS_BETWEEN)'].mean()
+
+        #calculate monetary value 
+        monetary = spending_option / int(years_with_us_option)
+
+        #calculate frequency
+        frequency = int(total_orders_option) / int(years_with_us_option)
+
+        #calculate recency
+        recency = (today_date.date() - date).days
+
+        #calculate monetary cluster 
+        if monetary <= 566:
+            monetary_cluster = 0
+        elif monetary <= 795:
+            monetary_cluster = 1
+        else:
+            monetary_cluster = 2
+        
+        #calculate frequency cluster 
+        if frequency <= 14:
+            frequency_cluster = 0
+        elif frequency <= 20:
+            frequency_cluster = 1
+        else:
+            frequency_cluster = 2
+
+        #calculate recency cluster 
+        if recency <= 12:
+            recency_cluster = 2
+        elif recency <= 33:
+            recency_cluster = 1
+        else:
+            recency_cluster = 0
+
+        #calculate overall score 
+        if recency <= 12 and frequency >= 30 and monetary >= 1259:
+            overall_score = 6
+        elif recency <= 33 and frequency >= 28 and monetary >= 1247:
+            overall_score = 5
+        elif recency <= 86 and frequency >= 24 and monetary >= 1006:
+            overall_score = 4
+        elif recency <= 96 and frequency >= 14 and frequency <20 and monetary >= 566 and monetary <794:
+            overall_score = 1
+        elif recency <= 98 and frequency >= 20 and monetary >= 794:
+            overall_score = 3
+        elif recency <= 115 and frequency >= 19 and monetary >= 776:
+            overall_score = 2
+        else:
+            overall_score = 0 
+
+        # making of dataframe to input to model 
+        data = [[spending_option, years_with_us_option, monetary, frequency, total_orders_option, recency, max_days_between, min_days_between, avg_days_between, trans_datediff1, trans_datediff2, recency_cluster, frequency_cluster, monetary_cluster, overall_score]]
+        final = pd.DataFrame(data, columns = ['TOTAL_SPENT','YEARS_WITH_US','MONETARY_VALUE','CUSTOMER_FREQUENCY','TOTAL_ORDER','RECENCY_DAYS','MAX(DAYS_BETWEEN)','MIN(DAYS_BETWEEN)','AVG(DAYS_BETWEEN)','TRANS_DATEDIFF1','TRANS_DATEDIFF2','CUST_REC_CLUSTER','CUST_FREQ_CLUSTER','CUST_MONETARY_CLUSTER','OVERALL_SCORE'])
+
+        pred = npm.predict(final)
+        pred = pred.round().astype(int)
+
+        # show prediction results 
+        if pred[-1] <= 14:
+            st.write("Customer is not likely to churn.")
+        else:
+            st.write("Customer is likely to churn. It is predicted that they are likely to make a purchase in the next " + str(pred[-1]) + " days, exceeding the 14-day benchmark for potential churn by " + str(pred[-1] - 14) + " days.") 
