@@ -1636,9 +1636,9 @@ with tab5:
     while numdays > 0:
         preddate = datetime_object + timedelta(days=numdays)
         for i in range(len(menu_to_show)):
-            final['ORDER_YEAR'][index] = preddate.year
-            final['ORDER_MONTH'][index] = preddate.month
-            final['ORDER_DAY'][index] = preddate.day
+            final.loc[index, 'ORDER_YEAR'] = preddate.year
+            final.loc[index, 'ORDER_MONTH'] = preddate.month
+            final.loc[index, 'ORDER_DAY'] = preddate.day
             index += 1
         numdays -= 1
     final['UNIT_PRICE'] = final['SALE_PRICE_USD']
