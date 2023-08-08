@@ -110,6 +110,7 @@ with tab5:
     final['ITEM_CATEGORY_Snack'] = np.where(final['ITEM_CATEGORY'] == 'Snack', 1, 0)
     #st.subheader('Day Slider')
     numdays = st.slider('Predict the next x days', 1, 30)
+    tdays = numdays
     #st.write(numdays)
     # '2022-11-01'
     final = pd.concat([final]*numdays, ignore_index=True)
@@ -194,6 +195,8 @@ with tab5:
 
         # Display the bar chart in Streamlit
         st.pyplot(fig)
+        st.text("It is predicted to have {0:.2f}% demand increase in the next {1} days".format(
+            (sum(predlist) - past_demand) / past_demand * 100, tdays))
         # Sample data (replace with your actual data)
         past = {'Sales Generated': past_sales}
         future = {'Sales Generated': present_sales}
@@ -220,3 +223,5 @@ with tab5:
 
         # Display the bar chart in Streamlit
         st.pyplot(fig)
+        st.text("It is predicted to have {0:.2f}% sales increase in the next {1} days".format(
+            (present_sales - past_sales) / past_sales * 100, tdays))
