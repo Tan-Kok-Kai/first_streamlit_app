@@ -59,7 +59,7 @@ with tab1:
     
     ## Define function to load the uplift prediction model
     def SW_load_uplift_1M():
-        data_1m = pd.read_csv("./SW_UpliftPrediction[1M].csv") 
+        data_1m = pd.read_csv("SW_UpliftPrediction[1M].csv") 
         data_1m = pd.DataFrame(data_1m)
         # Load customer cluster data
         data_cust_cluster = SW_load_cust_cluster()
