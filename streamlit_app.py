@@ -38,7 +38,7 @@ session = Session.builder.configs(connection_parameters).create()
 # Define the app title and favicon
 st.set_page_config(page_title='ICP ASG 3', page_icon="favicon.ico")
 
-tab5 = st.tabs(['Predicting Future Sales [Shi Wei]']
+tab5 = st.tabs(['Predicting Future Sales [Shi Wei]'])
 with tab5:
     menu_dfs = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_pos.menu")
     truck_df = session.table("NGEE_ANN_POLYTECHNIC_FROSTBYTE_DATA_SHARE.raw_pos.truck")
