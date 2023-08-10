@@ -38,7 +38,7 @@ session = Session.builder.configs(connection_parameters).create()
 # Define the app title and favicon
 st.set_page_config(page_title='ICP ASG 3', page_icon="favicon.ico")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(['Predicting Future Sales [Shi Wei]', 'Predicting Customer Spending [Ernest]', 'Predicting Customer Churn [Gwyneth]', 'Guo Fung', 'Demand Forecasting [Kok Kai]'])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(['tab1', 'tab2', 'tab3', 'tab4', 'Demand Forecasting [Kok Kai]'])
 
 with tab1:
     a = 1
