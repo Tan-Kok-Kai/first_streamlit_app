@@ -68,8 +68,13 @@ with tab5:
     st.title('Demand Forecasting')
     st.caption('This demand forecasting is mainly for truck owners to have an idea on their sales and demand of menu within the next 30 days. \
             It aims to target the high level goal of 25% YoY sales growth over 5 years.\
+               The model has learnt the trend of food demand daily/monthly, it will predict the menu with high accuracy and\
+               help users understand the trend.\
                Gaining insights into future demand allow truck owners to optimize their menu by focusing on food high in demand\
-               , which will attract more customers, increase in profit and ultimately increase in sales!')
+               , which will attract more customers, increase in profit and ultimately increase in sales!\
+               \n\nPlease note that as of August 2021, apps on the free community tier of Streamlit Cloud are limited by RAM, CPU \
+               and Disk storage. To prevent crashing of the app, please select the items one at a time!\
+               \nReference from: https://blog.streamlit.io/common-app-problems-resource-limits/')
     st.subheader('Truck')
     truck_df = truck_df.sort_values(by='TRUCK_ID').set_index('TRUCK_ID')
 
